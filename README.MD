@@ -104,6 +104,11 @@ Quart HTTP server  (app.py / routes.py)
 | `hvaerinnafor_qa_bank` | Pre-written Q&A pairs used for related-questions suggestions, the `/examples` cards, and the fast follow-up path |
 | `hvaerinnafor_unified` | Single index merging article chunks **and** ung.no Q&A nodes into one retrieval pool (Hyb mode) |
 
+All three indexes are built by [hei20_article_indexer](https://github.com/cgoul-code/hei20_article_indexer) (`python build_index.py --mode both`):
+`legacy` mode builds `hvaerinnafor` and `hvaerinnafor_qa_bank` from the article
+list in its `startUrls.json`; `unified` mode builds `hvaerinnafor_unified` from
+the same articles plus ung.no Q&A from Azure SQL.
+
 The index the client asks for determines which **retrieval mode** is active —
 see [Retrieval modes](#retrieval-modes) below.
 
@@ -980,19 +985,22 @@ To dump answers for a question list into Excel, see
 
 ## Adding new content
 
-1. **New articles** — add source documents to the `hvaerinnafor` index using
-   the existing ingestion pipeline. Each document needs `title`, `url`, and
-   optionally `icon_url` in its metadata. For unified mode, the same articles
-   must also be re-indexed into `hvaerinnafor_unified` so the synthetic-question
-   aliases and the cross-pollination step run on them.
+The indexes are built by [hei20_article_indexer](https://github.com/cgoul-code/hei20_article_indexer); see its README for setup and options.
 
-2. **New Q&A pairs** — add entries to the `hvaerinnafor_qa_bank` index. Each
-   node needs `answer`, `short_answer`, `severity`, `category`, `valid: 1`,
-   and `from_doc_id` pointing to the source article.
+1. **New articles** — add the URL to `startUrls.json` in [hei20_article_indexer](https://github.com/cgoul-code/hei20_article_indexer) and run
+   `python build_index.py --mode both`. The `legacy` build is incremental, so
+   only new articles are ingested into `hvaerinnafor` and `hvaerinnafor_qa_bank`;
+   the `unified` build re-indexes all articles into `hvaerinnafor_unified` so the
+   synthetic-question aliases and the cross-pollination step run on them.
 
-3. **New ung.no Q&A entries** — re-run the unified-index build so the entries
-   are ingested as Q&A nodes and considered for cross-pollination onto article
-   chunks.
+2. **New Q&A pairs** — generated per article by the `legacy` build into the
+   `hvaerinnafor_qa_bank` index. Each node needs `answer`, `short_answer`,
+   `severity`, `category`, `valid: 1`, and `from_doc_id` pointing to the source
+   article.
+
+3. **New ung.no Q&A entries** — re-run `python build_index.py --mode unified`
+   in [hei20_article_indexer](https://github.com/cgoul-code/hei20_article_indexer) so the entries are ingested as Q&A nodes and considered for
+   cross-pollination onto article chunks.
 
 4. **New categories** — add to the `categories` list in `answer_utils.py`.
 
